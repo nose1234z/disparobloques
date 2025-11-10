@@ -25,6 +25,25 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.11
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/icono.jpeg"
+  min_sdk_android: 21 # set to min_sdk_version of your Android app
+
+flutter_native_splash:
+  color: "#FFFFFF" # You can change this to match your app's primary color
+  image: "assets/images/splash.jpeg"
+  android_12:
+    image: "assets/images/splash.jpeg"
+    color: "#FFFFFF"
+  web: false # Set to true if you want to generate for web
+  ios_content_mode: "scaleAspectFill" # or "center"
+  android_gravity: "center" # or "fill"
+  fullscreen: true # Set to false if you want to show status bar
 
 flutter:
   uses-material-design: true
