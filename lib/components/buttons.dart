@@ -8,7 +8,7 @@ class ShopButton extends PositionComponent with TapCallbacks {
     : super(
         position: position,
         anchor: Anchor.topLeft,
-        size: Vector2(120, 50), // Increased size
+        size: Vector2(70, 70), // Adjusted size for an icon
       ) {
     _onTap = onTap;
   }
@@ -18,12 +18,18 @@ class ShopButton extends PositionComponent with TapCallbacks {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    final paint = Paint()..color = Colors.blue;
+    final paint = Paint()..color = const Color.fromARGB(255, 222, 16, 16);
     canvas.drawRect(size.toRect(), paint);
+
+    // Render shopping cart icon using TextPainter
     final textPainter = TextPainter(
       text: TextSpan(
-        text: 'Shop',
-        style: GoogleFonts.pressStart2p(color: Colors.white, fontSize: 16),
+        text: String.fromCharCode(Icons.shopping_cart.codePoint),
+        style: TextStyle(
+          fontFamily: Icons.shopping_cart.fontFamily,
+          color: const Color.fromARGB(255, 0, 0, 0),
+          fontSize: 60, // Adjust icon size
+        ),
       ),
       textDirection: TextDirection.ltr,
     );

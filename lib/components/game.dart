@@ -83,7 +83,7 @@ class MyPhysicsGame extends Forge2DGame {
     final shopButton = ShopButton(
       position: Vector2(
         20,
-        camera.viewport.size.y - 20 - 50,
+        camera.viewport.size.y - -170 - 50,
       ), // 50 is ShopButton's height
       onTap: () async {
         final purchasedPowerUp = await router.push<PowerUp>('/shop');
