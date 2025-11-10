@@ -93,13 +93,42 @@ class Player extends BodyComponentWithUserData with DragCallbacks {
     super.update(dt);
 
     if (!body.isAwake) {
-      removeFromParent();
+      // If the body is not awake, it means it has settled or is out of bounds
+      // We can choose to re-activate it or keep it removed based on game logic.
+      // For now, let's keep it removed if it's not awake and off-screen.
+      // If we want to keep it on screen, we need to ensure it's always awake or handle its state.
     }
 
-    if (position.x > camera.visibleWorldRect.right + 10 ||
-        position.x < camera.visibleWorldRect.left - 10) {
-      removeFromParent();
+    // Clamp player position to visible world rectangle
+    final worldRect = camera.visibleWorldRect;
+    final halfPlayerSize = playerSize / 2;
+
+    var newPositionX = position.x;
+    var newPositionY = position.y;
+    var newVelocityX = body.linearVelocity.x;
+    var newVelocityY = body.linearVelocity.y;
+
+    // Clamp X position
+    if (position.x - halfPlayerSize < worldRect.left) {
+      newPositionX = worldRect.left + halfPlayerSize;
+      newVelocityX = 0;
+    } else if (position.x + halfPlayerSize > worldRect.right) {
+      newPositionX = worldRect.right - halfPlayerSize;
+      newVelocityX = 0;
     }
+
+    // Clamp Y position (assuming top is 0 and bottom is positive)
+    if (position.y - halfPlayerSize < worldRect.top) {
+      newPositionY = worldRect.top + halfPlayerSize;
+      newVelocityY = 0;
+    } else if (position.y + halfPlayerSize > worldRect.bottom) {
+      newPositionY = worldRect.bottom - halfPlayerSize;
+      newVelocityY = 0;
+    }
+
+    // Apply clamped position and velocity
+    body.setTransform(Vector2(newPositionX, newPositionY), body.angle);
+    body.linearVelocity = Vector2(newVelocityX, newVelocityY);
   }
 
   Vector2 _dragStart = Vector2.zero();
