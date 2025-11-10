@@ -8,7 +8,7 @@ import 'package:forge2d_game/screens/leaderboard_screen.dart';
 import 'package:forge2d_game/screens/play_again_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:forge2d_game/models/power_up.dart';
+
 import 'package:forge2d_game/screens/shop_screen.dart'; // Import ShopScreen
 
 void main() async {
@@ -41,6 +41,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late final GoRouter _router;
+  MyPhysicsGame? _game; // Store the game instance
 
   @override
   void initState() {
@@ -52,7 +53,14 @@ class _MyAppState extends State<MyApp> {
           builder: (context, state) => GameWidget.controlled(
             gameFactory: () => MyPhysicsGame(
               router: _router,
-              activePowerUp: state.extra as PowerUp?,
+              onPowerUpPurchased: (powerUp) {
+                _game?.applyPowerUp(
+                  powerUp,
+                ); // Apply power-up to the running game
+              },
+              onGameCreated: (game) {
+                _game = game; // Store the game instance
+              },
             ),
           ),
         ),

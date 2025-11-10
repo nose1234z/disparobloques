@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
 import 'package:flame_kenney_xml/flame_kenney_xml.dart';
+import 'package:audioplayers/audioplayers.dart'; // Import audioplayers
 
 import 'package:go_router/go_router.dart';
 
@@ -24,14 +25,19 @@ import 'background.dart';
 import 'package:forge2d_game/models/power_up.dart'; // Import PowerUp model
 
 class MyPhysicsGame extends Forge2DGame {
-  MyPhysicsGame({required this.router, this.activePowerUp})
-    : super(
-        gravity: Vector2(0, 10),
-        camera: CameraComponent.withFixedResolution(width: 800, height: 600),
-      );
+  MyPhysicsGame({
+    required this.router,
+    required this.onPowerUpPurchased,
+    required this.onGameCreated, // Add onGameCreated callback
+  }) : super(
+         gravity: Vector2(0, 10),
+         camera: CameraComponent.withFixedResolution(width: 800, height: 600),
+       );
 
   final GoRouter router;
-  final PowerUp? activePowerUp; // Store the active power-up
+  final Function(PowerUp) onPowerUpPurchased;
+  final Function(MyPhysicsGame)
+  onGameCreated; // Callback to pass game instance back
 
   late final XmlSpriteSheet aliens;
   late final XmlSpriteSheet elements;
@@ -41,6 +47,8 @@ class MyPhysicsGame extends Forge2DGame {
   late final ScoreDisplay scoreDisplay;
   bool wonGame = false;
   late Player _player; // Declare player field
+  final AudioPlayer _gameMusicPlayer =
+      AudioPlayer(); // Audio player for game music
 
   @override
   FutureOr<void> onLoad() async {
@@ -77,54 +85,87 @@ class MyPhysicsGame extends Forge2DGame {
         20,
         camera.viewport.size.y - 20 - 50,
       ), // 50 is ShopButton's height
-      onTap: () {
-        router.go('/shop');
+      onTap: () async {
+        final purchasedPowerUp = await router.push<PowerUp>('/shop');
+        if (purchasedPowerUp != null) {
+          onPowerUpPurchased(purchasedPowerUp);
+        }
       },
     );
     camera.viewport.add(shopButton);
 
-    // Apply power-up effects if present
-    if (activePowerUp != null) {
-      switch (activePowerUp!.name) {
-        case 'Super Jump':
-          _player.setJumpMultiplier(2.0);
-          add(
-            TimerComponent(
-              period: 10.0, // Duration of Super Jump
-              onTick: () {
-                _player.setJumpMultiplier(1.0); // Reset
-              },
-              removeOnFinish: true,
-            ),
-          );
-          break;
-        case 'Invincibility Shield':
-          _player.setInvincible(true);
-          add(
-            TimerComponent(
-              period: 5.0, // Duration of Invincibility
-              onTick: () {
-                _player.setInvincible(false); // Reset
-              },
-              removeOnFinish: true,
-            ),
-          );
-          break;
-        case 'Extra Shots':
-          shotsLeft += 5;
-          scoreDisplay.updateScore(shotsLeft); // Update display
-          break;
-        case 'Extra Life':
-          shotsLeft += 1;
-          scoreDisplay.updateScore(shotsLeft); // Update display
-          break;
-        default:
-          // Handle unknown power-ups or do nothing
-          break;
-      }
-    }
+    // Communicate game instance back to the Flutter widget tree
+    onGameCreated(this);
+
+    // Play game music
+    _gameMusicPlayer.setReleaseMode(ReleaseMode.loop);
+    // Configure AudioContext for background music
+    _gameMusicPlayer.setAudioContext(
+      AudioContext(
+        iOS: AudioContextIOS(
+          category: AVAudioSessionCategory.ambient,
+          options: const {},
+        ),
+        android: AudioContextAndroid(
+          contentType: AndroidContentType.music,
+          usageType: AndroidUsageType.media,
+          audioFocus: AndroidAudioFocus.gain,
+        ),
+      ),
+    );
+    _gameMusicPlayer.play(
+      AssetSource('music/fondo.mp3'),
+    ); // Assuming fondo.mp3 exists
 
     return super.onLoad();
+  }
+
+  @override
+  void onRemove() {
+    _gameMusicPlayer.stop();
+    _gameMusicPlayer.dispose();
+    super.onRemove();
+  }
+
+  // New method to apply power-up effects dynamically
+  void applyPowerUp(PowerUp powerUp) {
+    switch (powerUp.name) {
+      case 'Super Jump':
+        _player.setJumpMultiplier(2.0);
+        add(
+          TimerComponent(
+            period: 10.0, // Duration of Super Jump
+            onTick: () {
+              _player.setJumpMultiplier(1.0); // Reset
+            },
+            removeOnFinish: true,
+          ),
+        );
+        break;
+      case 'Invincibility Shield':
+        _player.setInvincible(true);
+        add(
+          TimerComponent(
+            period: 5.0, // Duration of Invincibility
+            onTick: () {
+              _player.setInvincible(false); // Reset
+            },
+            removeOnFinish: true,
+          ),
+        );
+        break;
+      case 'Extra Shots':
+        shotsLeft += 5;
+        scoreDisplay.updateScore(shotsLeft); // Update display
+        break;
+      case 'Extra Life':
+        shotsLeft += 1;
+        scoreDisplay.updateScore(shotsLeft); // Update display
+        break;
+      default:
+        // Handle unknown power-ups or do nothing
+        break;
+    }
   }
 
   Future<void> addGround() {
@@ -168,18 +209,17 @@ class MyPhysicsGame extends Forge2DGame {
   }
 
   Future<void> addPlayer() async {
-    if (shotsLeft > 0) {
-      _player = Player(
-        // Assign to _player
-        Vector2(camera.visibleWorldRect.left * 2 / 3, 0),
-        aliens.getSprite(PlayerColor.randomColor.fileName),
-        onShoot: () {
-          shotsLeft--;
-          scoreDisplay.updateScore(shotsLeft);
-        },
-      );
-      world.add(_player); // Add the player to the world
-    }
+    _player = Player(
+      // Assign to _player
+      Vector2(camera.visibleWorldRect.left * 2 / 3, 0),
+      aliens.getSprite(PlayerColor.randomColor.fileName),
+      onShoot: () {
+        shotsLeft--;
+        scoreDisplay.updateScore(shotsLeft);
+      },
+      canShoot: () => shotsLeft > 0, // Pass the canShoot check
+    );
+    world.add(_player); // Add the player to the world
   }
 
   @override
@@ -190,12 +230,11 @@ class MyPhysicsGame extends Forge2DGame {
 
     if (isMounted && noPlayersLeft && !allEnemiesRemoved && shotsLeft == 0) {
       // Game over (lost)
-      wonGame = false;
-      router.go('/game-over', extra: {'score': 5 - shotsLeft, 'won': wonGame});
+      router.go('/game-over', extra: {'score': shotsLeft, 'won': wonGame});
     } else if (isMounted && enemiesFullyAdded && allEnemiesRemoved) {
       // Game over (won)
       wonGame = true;
-      router.go('/game-over', extra: {'score': 5 - shotsLeft, 'won': wonGame});
+      router.go('/game-over', extra: {'score': shotsLeft, 'won': wonGame});
     } else if (isMounted && noPlayersLeft && !allEnemiesRemoved) {
       addPlayer();
     }

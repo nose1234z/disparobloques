@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:audioplayers/audioplayers.dart'; // Import audioplayers
 
 class GameOverScreen extends StatefulWidget {
   const GameOverScreen({super.key, required this.score, required this.won});
@@ -15,10 +16,29 @@ class GameOverScreen extends StatefulWidget {
 
 class _GameOverScreenState extends State<GameOverScreen> {
   final TextEditingController nameController = TextEditingController();
+  final AudioPlayer _gameOverMusicPlayer =
+      AudioPlayer(); // Audio player for game over music
+
+  @override
+  void initState() {
+    super.initState();
+    // Play appropriate music based on win/lose
+    if (widget.won) {
+      _gameOverMusicPlayer.play(
+        AssetSource('music/win.mp3'),
+      ); // Assuming win.mp3 exists
+    } else {
+      _gameOverMusicPlayer.play(
+        AssetSource('music/game_over.mp3'),
+      ); // Assuming game_over.mp3 exists
+    }
+  }
 
   @override
   void dispose() {
     nameController.dispose();
+    _gameOverMusicPlayer.stop();
+    _gameOverMusicPlayer.dispose();
     super.dispose();
   }
 
@@ -31,34 +51,10 @@ class _GameOverScreenState extends State<GameOverScreen> {
           'disparos': widget.score,
           'fecha_juego': DateTime.now().toIso8601String(),
         });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Score submitted successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
       } on PostgrestException catch (e) {
         debugPrint('Supabase Error: ${e.message}');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error submitting score: ${e.message}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
       } catch (e) {
         debugPrint('An unexpected error occurred: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('An unexpected error occurred: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
       }
     }
     if (mounted) {

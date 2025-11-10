@@ -32,12 +32,6 @@ class _ShopScreenState extends State<ShopScreen> {
     );
 
     if (success == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Successfully purchased ${powerUp.name}!'),
-          backgroundColor: Colors.green,
-        ),
-      );
       Navigator.of(context).pop(powerUp); // Use generic pop
     }
   }
